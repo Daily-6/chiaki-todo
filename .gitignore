@@ -1,0 +1,16 @@
+node_modules/
+release/
+.qa/
+output/
+*.log
+*.lnk
+.env
+.env.*
+!.env.example
+tasks.json
+tasks.backup.json
+
+# Unused illustration drafts; keep the final scene and UI assets.
+src/assets/chiaki.png
+src/assets/chiaki-reference.png
+src/assets/chiaki-reference-v2.png
