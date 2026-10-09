@@ -15,6 +15,11 @@ module.exports=async({app,win,commit,getState,dataFile,model})=>{
   const checks=[];const check=(name,fn)=>{fn();checks.push(name);console.log('PASS '+name);};
   try{
     await until('window.__chiakiReady === true');
+    assert.equal(win.getTitle(),'千秋万待');
+    assert.equal(await js('document.title'),'千秋万待');
+    assert.equal(await js('document.querySelector(".brand strong").textContent'),'千秋万待');
+    assert.ok((await js('document.querySelector(".titlebar-name").textContent')).includes('千秋万待'));
+    checks.push('renamed app title, sidebar brand and window title');
     if(process.argv.includes('--screenshot-only')){
       await commit(model.demoState());await reload();await screenshot('caption-today');
       win.setSize(1060,700);await sleep(150);await screenshot('caption-compact');

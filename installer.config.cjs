@@ -1,13 +1,14 @@
 module.exports={
+  // Keep the installed identity stable so the renamed app upgrades the old app.
   appId:'local.chiaki.todo',
-  productName:'七海待办',
-  executableName:'七海待办',
+  productName:'千秋万待',
+  executableName:'千秋万待',
   directories:{output:'.qa/installer',buildResources:'src/assets'},
   compression:'normal',
   publish:null,
   win:{target:[{target:'nsis',arch:['x64']}],icon:'src/assets/app.ico',signAndEditExecutable:false},
   nsis:{
-    artifactName:'七海待办-安装程序-${version}.${ext}',
+    artifactName:'千秋万待-安装程序-${version}.${ext}',
     oneClick:false,
     perMachine:false,
     selectPerMachineByDefault:false,
@@ -15,8 +16,8 @@ module.exports={
     allowToChangeInstallationDirectory:true,
     createDesktopShortcut:true,
     createStartMenuShortcut:true,
-    shortcutName:'七海待办',
-    uninstallDisplayName:'七海待办',
+    shortcutName:'千秋万待',
+    uninstallDisplayName:'千秋万待',
     deleteAppDataOnUninstall:false,
     runAfterFinish:false,
     installerLanguages:['zh_CN'],

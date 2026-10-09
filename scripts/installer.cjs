@@ -15,8 +15,8 @@ async function packageApp(){
 (async()=>{
   if(process.platform!=='win32')throw new Error('Build the Windows installer on Windows.');
   if(!process.argv.includes('--use-existing'))await packageApp();
-  const prepackaged=path.join(root,'.qa','package','七海待办-win32-x64');
-  await fs.access(path.join(prepackaged,'七海待办.exe'));
+  const prepackaged=path.join(root,'.qa','package','千秋万待-win32-x64');
+  await fs.access(path.join(prepackaged,'千秋万待.exe'));
   process.env.CSC_IDENTITY_AUTO_DISCOVERY='false';
   const artifacts=await build({projectDir:root,prepackaged,targets:Platform.WINDOWS.createTarget('nsis',Arch.x64),publish:'never',config:require('../installer.config.cjs')});
   const release=path.join(root,'release');

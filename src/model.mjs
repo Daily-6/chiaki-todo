@@ -62,7 +62,7 @@ export function completeTask(state,id,now=new Date()) {
   }
 }
 export function validateState(input) {
-  if (!input || typeof input!=='object' || input.version!==1 || !Array.isArray(input.lists) || !Array.isArray(input.tasks)) throw new Error('请选择七海待办导出的 JSON 备份。');
+  if (!input || typeof input!=='object' || input.version!==1 || !Array.isArray(input.lists) || !Array.isArray(input.tasks)) throw new Error('请选择千秋万待导出的 JSON 备份。');
   if (!input.lists.length || input.lists.length>100 || input.tasks.length>50000) throw new Error('备份中的清单或任务数量无效。');
   const colors=['rose','sage','amber','lavender','blue'];
   const listIds=new Set();

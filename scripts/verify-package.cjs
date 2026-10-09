@@ -3,7 +3,7 @@ const fs=require('node:fs/promises');
 const path=require('node:path');
 const assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'../.qa/packaged-test');
-const exe=path.resolve(__dirname,'../.qa/package/七海待办-win32-x64/七海待办.exe');
+const exe=path.resolve(__dirname,'../.qa/package/千秋万待-win32-x64/千秋万待.exe');
 async function run(args){return new Promise((resolve,reject)=>{const p=spawn(exe,args,{windowsHide:true,env:{...process.env,CHIAKI_QA_ROOT:root}});let output='';p.stdout.on('data',s=>{output+=s;process.stdout.write(s)});p.stderr.on('data',s=>{output+=s;process.stderr.write(s)});p.on('error',reject);p.on('close',code=>code===0?resolve(output):reject(new Error('Packaged app exited '+code+': '+output)));});}
 (async()=>{
   if(process.argv.includes('--screenshot-only')){await fs.mkdir(root,{recursive:true});await run(['--self-test','--screenshot-only']);return;}

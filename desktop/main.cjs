@@ -8,6 +8,7 @@ if(isTest){app.disableHardwareAcceleration();app.commandLine.appendSwitch('disab
 const qaProfile=process.env.CHIAKI_QA_PROFILE;
 const qaRoot=process.env.CHIAKI_QA_ROOT?path.resolve(process.env.CHIAKI_QA_ROOT):path.resolve(__dirname,'../.qa');
 if(isTest||isProbe||qaProfile) app.setPath('userData',path.join(qaRoot,qaProfile||'profile'));
+// Preserve the original profile location across the display-name change.
 else app.setPath('userData',path.join(app.getPath('appData'),'ChiakiTodo'));
 app.setAppUserModelId('local.chiaki.todo');
 let win,store,model,saveQueue=Promise.resolve(),loadIssue=null,closing=false,notificationsReady=false;
@@ -42,7 +43,7 @@ async function prepareNotifications(){
   try{
     const folder=path.join(app.getPath('appData'),'Microsoft','Windows','Start Menu','Programs');
     await fs.mkdir(folder,{recursive:true});
-    notificationsReady=shell.writeShortcutLink(path.join(folder,'七海待办.lnk'),'create',{target:process.execPath,cwd:path.dirname(process.execPath),description:'七海待办 · 本地待办与专注',icon:process.execPath,iconIndex:0,appUserModelId:'local.chiaki.todo',toastActivatorClsid:'{D1A35279-2EBB-48A8-89F0-10B08FA01071}'});
+    notificationsReady=shell.writeShortcutLink(path.join(folder,'千秋万待.lnk'),'create',{target:process.execPath,cwd:path.dirname(process.execPath),description:'千秋万待 · 本地待办与专注',icon:process.execPath,iconIndex:0,appUserModelId:'local.chiaki.todo',toastActivatorClsid:'{D1A35279-2EBB-48A8-89F0-10B08FA01071}'});
   }catch{notificationsReady=false;}
 }
 function notify(title,body){
@@ -61,7 +62,7 @@ async function checkReminders() {
       const due=new Date(`${task.dueDate}T${task.dueTime}:00`).getTime();
       const key=`${task.id}:${task.dueDate}:${task.dueTime}`;
       if(due<=now&&now-due<600000&&!store.notified.includes(key)) {
-        receipts.push(key);notify('七海待办',task.title);
+        receipts.push(key);notify('千秋万待',task.title);
         win?.webContents.send('reminder',{type:'task',id:task.id,key});
       }
     }
@@ -75,7 +76,7 @@ async function checkReminders() {
 }
 function buildWindow() {
   const iconPath=path.join(__dirname,'../src/assets/app-icon.png');
-  win=new BrowserWindow({width:1440,height:930,minWidth:1060,minHeight:700,frame:false,show:false,backgroundColor:'#faf8f5',title:'七海待办',icon:nativeImage.createFromPath(iconPath),autoHideMenuBar:true,webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:false}});
+  win=new BrowserWindow({width:1440,height:930,minWidth:1060,minHeight:700,frame:false,show:false,backgroundColor:'#faf8f5',title:'千秋万待',icon:nativeImage.createFromPath(iconPath),autoHideMenuBar:true,webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:false}});
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',event=>event.preventDefault());
   win.on('maximize',()=>win.webContents.send('window:maximized',true));
@@ -95,7 +96,7 @@ else {
     register('data:save',async data=> {if(!store&&loadIssue)throw new Error(loadIssue);await commit(data);return {};});
     register('data:export',async()=> {
       await saveQueue;if(!store)throw new Error('没有可导出的数据。');
-      const result=await dialog.showSaveDialog(win,{title:'导出待办备份',defaultPath:`七海待办-${model.localDate()}.json`,filters:[{name:'JSON 备份',extensions:['json']}]});
+      const result=await dialog.showSaveDialog(win,{title:'导出待办备份',defaultPath:`千秋万待-${model.localDate()}.json`,filters:[{name:'JSON 备份',extensions:['json']}]});
       if(result.canceled)return {canceled:true};await fs.writeFile(result.filePath,JSON.stringify(store,null,2),'utf8');return {path:result.filePath};
     });
     register('data:import',async()=> {
