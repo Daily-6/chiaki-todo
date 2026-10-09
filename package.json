@@ -12,6 +12,7 @@
     "preview": "node scripts/preview.cjs",
     "package": "node scripts/installer.cjs",
     "installer": "node scripts/installer.cjs",
+    "local:build": "node scripts/local-app.cjs",
     "test:desktop": "electron . --self-test"
   },
   "devDependencies": {
