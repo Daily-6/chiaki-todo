@@ -14,17 +14,12 @@ npm start
 ```powershell
 npm test                 # 数据与日历测试
 npm run test:desktop     # 桌面交互测试，使用独立测试数据
-npm run package          # 生成 Windows x64 便携应用
 npm run installer        # 生成可选择安装目录的 Windows 安装程序
 ```
 
-打包输出到 `release/七海待办-win32-x64/`。首次打包需要下载 Electron；本地依赖、打包目录和测试缓存不纳入 Git。
+`npm run package` 同样生成安装程序。`release/` 只保留最终的安装程序 `.exe`，中间文件和构建日志存放在 `.qa/`。首次构建需要下载 Electron 和安装向导组件；本地依赖、打包目录和测试缓存不纳入 Git。
 
 可选开发工具：`scripts/make-icons.cjs` 需要 `sharp`；`scripts/preview-test.cjs` 需要 `playwright` 和它的 Chromium 浏览器，并需先启动 `npm run preview`。正常运行、测试和打包无需安装这两项。
-
-## 使用便携版
-
-双击 **七海待办.exe** 打开。适用于 Windows 11 x64，解压后即可运行，无需使用 CMD、安装 Node.js 或联网。程序位于 `release\七海待办-win32-x64` 文件夹中，请保留同文件夹内的配套文件。首次启动是空白清单。更新时先关闭旧版本窗口，再打开新版；原有待办数据会继续沿用。
 
 ## 使用安装版
 
@@ -46,7 +41,7 @@ npm run installer        # 生成可选择安装目录的 Windows 安装程序
 
 右侧可开始 15／25／45／60 分钟专注计时，支持暂停和重置。右上角展开按钮进入宽屏专注布局。设置中可切换深色模式或关闭插画。
 
-**桌面提醒和专注提醒仅在程序运行时生效。** 最小化可以继续计时；关闭窗口会退出程序。首次启动便携版会创建「七海待办」开始菜单快捷方式，以支持 Windows 通知。提醒还受 Windows 通知设置和勿扰模式影响，不会为过去的日期补发提醒。系统通知不可用时，应用内仍会显示提醒。
+**桌面提醒和专注提醒仅在程序运行时生效。** 最小化可以继续计时；关闭窗口会退出程序。开始菜单快捷方式用于支持 Windows 通知。提醒还受 Windows 通知设置和勿扰模式影响，不会为过去的日期补发提醒。系统通知不可用时，应用内仍会显示提醒。
 
 ## 本地数据
 
@@ -58,7 +53,7 @@ npm run installer        # 生成可选择安装目录的 Windows 安装程序
 
 ## 源码运行
 
-在项目目录执行 `npm install` 后，`npm start` 运行桌面版；`npm test` 运行数据逻辑测试；`npm run package` 生成 Windows 便携目录。`npm run preview` 只启动浏览器预览，预览数据与桌面版相互独立。
+在项目目录执行 `npm ci` 后，`npm start` 运行桌面版；`npm test` 运行数据逻辑测试；`npm run package` 或 `npm run installer` 生成 Windows 安装程序。`npm run preview` 只启动浏览器预览，预览数据与桌面版相互独立。
 
 ## 设计参考
 

@@ -2,7 +2,7 @@ module.exports={
   appId:'local.chiaki.todo',
   productName:'七海待办',
   executableName:'七海待办',
-  directories:{output:'release',buildResources:'src/assets'},
+  directories:{output:'.qa/installer',buildResources:'src/assets'},
   compression:'normal',
   publish:null,
   win:{target:[{target:'nsis',arch:['x64']}],icon:'src/assets/app.ico',signAndEditExecutable:false},

@@ -42,7 +42,7 @@ try {
     $taskExe = Join-Path $taskDir '七海待办.exe'
     $taskAsar = Join-Path $taskDir 'resources\app.asar'
     if (-not (Test-Path -LiteralPath $taskExe)) { throw 'Selected destination has no application' }
-    $taskSourceAsar = Join-Path $taskRoot 'release\七海待办-win32-x64\resources\app.asar'
+    $taskSourceAsar = Join-Path $taskRoot '.qa\package\七海待办-win32-x64\resources\app.asar'
     if ((Get-FileHash -LiteralPath $taskAsar).Hash -ne (Get-FileHash -LiteralPath $taskSourceAsar).Hash) { throw 'Installed application differs from packaged source' }
     $taskChecks.Add('Installs complete app into selected folder containing Chinese characters and spaces')
     $taskRegistration = @(Get-TaskRegistration)
