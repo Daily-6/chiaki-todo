@@ -15,4 +15,5 @@
 @media(max-height:800px){.calendar-day{min-height:84px}.calendar-day-heading{margin-bottom:3px}.calendar-agenda{margin-top:18px}.calendar-toolbar{margin-bottom:13px}}
 
 .calendar-panel .page-header{margin-bottom:24px}.calendar-panel .page-header p{display:none}
+.calendar-content{scrollbar-gutter:stable;overflow-anchor:none}.calendar-agenda{height:260px;overflow-y:auto;scrollbar-gutter:stable;overscroll-behavior:contain;overflow-anchor:none}.calendar-agenda header{position:sticky;top:0;background:var(--bg);z-index:1}
 @media(max-height:800px){.calendar-panel .page-header{margin-bottom:20px}.calendar-day{min-height:54px;padding-top:4px;padding-bottom:4px}.calendar-day-heading{margin-bottom:2px}.day-number{width:22px;height:22px}.calendar-items{gap:2px}.calendar-task{height:18px;font-size:10px;padding-top:1px;padding-bottom:1px}.calendar-more{line-height:14px}.calendar-weekdays{padding-bottom:9px}}

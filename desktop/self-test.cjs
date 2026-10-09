@@ -13,6 +13,25 @@ module.exports=async({app,win,commit,getState,dataFile,model})=>{
   const saved=()=>until('document.querySelector("#save-status").textContent.includes("保存在此电脑")');
   const screenshot=async(name)=>{const key=await win.webContents.insertCSS('*{animation:none!important;transition:none!important}');await win.webContents.capturePage(undefined,{stayHidden:true});await sleep(150);const shot=await win.webContents.capturePage(undefined,{stayHidden:true});await fs.writeFile(path.join(root,name+'.png'),shot.toPNG());await win.webContents.removeInsertedCSS(key);};
   const checks=[];const check=(name,fn)=>{fn();checks.push(name);console.log('PASS '+name);};
+  const stableCalendarSelection=async(label)=>{
+    const dates=await js(`(()=>{const month=document.querySelector('.month-calendar').dataset.month.slice(0,7);const days=[...document.querySelectorAll('.calendar-day')].filter(d=>d.dataset.date.startsWith(month));return [days.find(d=>Number(d.querySelector('.day-count')?.textContent)>2),days.find(d=>d.querySelector('.day-count')?.textContent==='1'),days.find(d=>!d.querySelector('.day-count'))].map(d=>d.dataset.date);})()`);
+    const geometry=()=>js(`(()=>{const c=document.querySelector('.calendar-content'),r=document.querySelector('.calendar-grid').getBoundingClientRect();return {top:r.top,left:r.left,width:r.width,scroll:c.scrollTop,height:c.scrollHeight};})()`);
+    await js('window.__calendarGrid=document.querySelector(".calendar-grid");window.__calendarArt=document.querySelector(".art-panel");');
+    for(const scroll of [0,60]){
+      await js(`document.querySelector('.calendar-content').scrollTop=${scroll}`);
+      for(const date of [...dates,...dates.toReversed()]){
+        const before=await geometry();await click(`.calendar-day[data-date="${date}"]`);
+        for(const delay of [100,450]){await sleep(delay);const after=await geometry();for(const key of Object.keys(before))assert.ok(Math.abs(before[key]-after[key])<0.5,`${label}: ${key} moved from ${before[key]} to ${after[key]} on ${date}`);}
+        assert.equal(await js('document.querySelector(".selected-day").dataset.date'),date);
+        assert.equal(await js('document.querySelectorAll(".calendar-agenda [data-task]").length'),getState().tasks.filter(t=>!t.completed&&t.dueDate===date).length);
+      }
+    }
+    assert.ok(await js('window.__calendarGrid===document.querySelector(".calendar-grid") && window.__calendarArt===document.querySelector(".art-panel")'));
+    const before=await geometry();await js(`(()=>{const d=document.querySelector('.calendar-day[data-date="${dates[0]}"]');d.focus({preventScroll:true});d.dispatchEvent(new KeyboardEvent('keydown',{key:' ',bubbles:true}));})()`);await sleep(550);assert.deepEqual(await geometry(),before);
+    assert.equal(await js(`document.querySelector('.calendar-day[data-date="${dates[0]}"]').getAttribute('aria-pressed')`),'true');
+    await js('document.querySelector(".calendar-content").scrollTop=0');
+    checks.push(label+' date clicks and keyboard selection keep calendar position with empty and busy days');
+  };
   try{
     await until('window.__chiakiReady === true');
     assert.equal(win.getTitle(),'千秋万待');
@@ -78,6 +97,7 @@ module.exports=async({app,win,commit,getState,dataFile,model})=>{
     assert.equal(await js(`document.querySelectorAll('.calendar-day[data-date="${today}"] .calendar-task').length`),2);
     assert.equal(await js(`document.querySelector('.calendar-day[data-date="${today}"] .calendar-more').textContent`),'＋'+(todayCount-2)+' 件');
     checks.push('calendar displays daily task names, overflow count and full selected-day agenda');
+    await stableCalendarSelection('full window');
     await click(`.calendar-day[data-date="${date}"]`);await click('[data-action="new-task"]');
     assert.equal(await js('document.querySelector("[name=dueDate]").value'),date);
     await value('#task-title','日历新建验证');await js('document.querySelector("#task-form").requestSubmit()');await saved();
@@ -103,7 +123,7 @@ module.exports=async({app,win,commit,getState,dataFile,model})=>{
     assert.equal(await js('document.querySelector(".selected-day").dataset.date'),today);
     checks.push('calendar handles year change, leap day, adjacent month and return to today');
     await commit(model.demoState());await reload();await click('[data-view="scheduled"]');await screenshot('calendar');
-    win.setSize(1060,700);await sleep(200);await screenshot('calendar-compact');
+    win.setSize(1060,700);await sleep(200);await stableCalendarSelection('compact window');await screenshot('calendar-compact');
     await value('#calendar-month','2026-08');await js('document.querySelector("#calendar-month").dispatchEvent(new Event("change",{bubbles:true}))');await screenshot('calendar-six-weeks');
     assert.equal(await js('document.querySelectorAll(".calendar-day").length'),42);
     assert.ok(await js('document.body.scrollWidth<=innerWidth && document.querySelector(".calendar-grid").scrollWidth<=document.querySelector(".calendar-grid").clientWidth'));
