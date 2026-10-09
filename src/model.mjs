@@ -1,3 +1,4 @@
+import {matchesTaskFilters,normalizeTags,validFocusMinutes} from './filters.mjs';
 export const PRIORITIES = ['none', 'low', 'medium', 'high'];
 export const QUADRANTS = [
   { id: 'do', title: '立即行动', subtitle: '重要 · 紧急', important: true, urgent: true, color: 'rose', icon: 'bolt' },
@@ -26,14 +27,20 @@ export function initialState() {
   ], tasks: [], settings: { theme:'light', artwork:true, notifications:true, sort:'priority', focusMinutes:25 }, timer: { end:null, taskId:null }, notified: [] };
 }
 export function newTask(values={}) {
-  return { id:uid(), title:'', notes:'', listId:'personal', priority:'none', important:false, urgent:false, dueDate:'', dueTime:'', repeat:'none', subtasks:[], completed:false, completedAt:null, createdAt:new Date().toISOString(), order:Date.now(), ...values };
+  return { id:uid(), title:'', notes:'', tags:[], listId:'personal', priority:'none', important:false, urgent:false, dueDate:'', dueTime:'', repeat:'none', subtasks:[], completed:false, completedAt:null, createdAt:new Date().toISOString(), order:Date.now(), ...values };
 }
 export function quadrant(task) { return QUADRANTS.find(q => q.important === task.important && q.urgent === task.urgent); }
 export function isToday(task, today=localDate()) { return !task.completed && !!task.dueDate && task.dueDate <= today; }
-export function filteredTasks(state, view, query='', today=localDate()) {
+export function filteredTasks(state, view, query='', today=localDate(), filters=null) {
   const needle = query.trim().toLocaleLowerCase();
   return state.tasks.filter(t => {
-    if (needle && !`${t.title} ${t.notes} ${t.subtasks.map(s=>s.title).join(' ')}`.toLocaleLowerCase().includes(needle)) return false;
+    if (needle && !`${t.title} ${t.notes} ${(t.tags||[]).join(' ')} ${t.subtasks.map(s=>s.title).join(' ')}`.toLocaleLowerCase().includes(needle)) return false;
+    if(filters){
+      if(!matchesTaskFilters(t,filters,today,addDays))return false;
+      if(view==='today')return !!t.dueDate&&t.dueDate<=today;
+      if(view==='scheduled')return !!t.dueDate;
+      return true;
+    }
     if (view === 'completed') return t.completed;
     if (t.completed) return false;
     if (view === 'today') return isToday(t,today);
@@ -43,11 +50,16 @@ export function filteredTasks(state, view, query='', today=localDate()) {
     return true;
   });
 }
-export function sortedTasks(tasks, sort='priority') {
+export function sortedTasks(tasks, sort='priority', lists=[]) {
   return [...tasks].sort((a,b)=> {
     if (sort === 'priority') return PRIORITIES.indexOf(b.priority)-PRIORITIES.indexOf(a.priority) || Number(b.important)-Number(a.important) || Number(b.urgent)-Number(a.urgent) || (a.dueDate||'9999').localeCompare(b.dueDate||'9999') || a.order-b.order;
     if (sort === 'date') return (a.dueDate||'9999').localeCompare(b.dueDate||'9999') || (a.dueTime||'').localeCompare(b.dueTime||'') || a.order-b.order;
     if (sort === 'created') return b.createdAt.localeCompare(a.createdAt);
+    if (sort === 'important' || sort === 'urgent')return Number(b[sort])-Number(a[sort])||a.order-b.order;
+    if (sort === 'title')return a.title.localeCompare(b.title,'zh-CN',{numeric:true});
+    if (sort === 'tags')return Number(!(a.tags||[]).length)-Number(!(b.tags||[]).length)||(a.tags||[]).toSorted().join(',').localeCompare((b.tags||[]).toSorted().join(','),'zh-CN')||a.order-b.order;
+    if (sort === 'list')return (lists.find(l=>l.id===a.listId)?.name||a.listId).localeCompare(lists.find(l=>l.id===b.listId)?.name||b.listId,'zh-CN')||a.order-b.order;
+    if (sort === 'completed')return Number(a.completed)-Number(b.completed)||(b.completedAt||'').localeCompare(a.completedAt||'')||a.order-b.order;
     return a.order-b.order;
   });
 }
@@ -77,10 +89,10 @@ export function validateState(input) {
     ids.add(t.id);
     if(t.dueTime && (!/^([01]\d|2[0-3]):[0-5]\d$/.test(t.dueTime)||!t.dueDate))throw new Error('提醒时间无效。');
     const subtasks=Array.isArray(t.subtasks)?t.subtasks.slice(0,100).map(s=>({id:typeof s.id==='string'?s.id:uid(),title:String(s.title||'').slice(0,300),completed:!!s.completed})).filter(s=>s.title.trim()):[];
-    return {id:t.id,title:t.title.trim(),notes:String(t.notes||'').slice(0,10000),listId:t.listId,priority:PRIORITIES.includes(t.priority)?t.priority:'none',important:!!t.important,urgent:!!t.urgent,dueDate:t.dueDate||'',dueTime:t.dueTime||'',repeat:['daily','weekly','monthly'].includes(t.repeat)&&t.dueDate?t.repeat:'none',subtasks,completed:!!t.completed,completedAt:typeof t.completedAt==='string'?t.completedAt:null,createdAt:typeof t.createdAt==='string'&&Number.isFinite(Date.parse(t.createdAt))?t.createdAt:new Date().toISOString(),order:Number.isFinite(t.order)?t.order:Date.now(),repeatSource:typeof t.repeatSource==='string'?t.repeatSource:undefined,editedAt:typeof t.editedAt==='string'?t.editedAt:null};
+    return {id:t.id,title:t.title.trim(),notes:String(t.notes||'').slice(0,10000),tags:normalizeTags(t.tags),listId:t.listId,priority:PRIORITIES.includes(t.priority)?t.priority:'none',important:!!t.important,urgent:!!t.urgent,dueDate:t.dueDate||'',dueTime:t.dueTime||'',repeat:['daily','weekly','monthly'].includes(t.repeat)&&t.dueDate?t.repeat:'none',subtasks,completed:!!t.completed,completedAt:typeof t.completedAt==='string'?t.completedAt:null,createdAt:typeof t.createdAt==='string'&&Number.isFinite(Date.parse(t.createdAt))?t.createdAt:new Date().toISOString(),order:Number.isFinite(t.order)?t.order:Date.now(),repeatSource:typeof t.repeatSource==='string'?t.repeatSource:undefined,editedAt:typeof t.editedAt==='string'?t.editedAt:null};
   });
   const defaults=initialState().settings;const settings=input.settings||{};
-  return {version:1,lists,tasks,settings:{theme:settings.theme==='dark'?'dark':'light',artwork:settings.artwork!==false,notifications:settings.notifications!==false,sort:['priority','date','created','manual'].includes(settings.sort)?settings.sort:defaults.sort,focusMinutes:[15,25,45,60].includes(settings.focusMinutes)?settings.focusMinutes:25},timer:{end:Number.isFinite(input.timer?.end)?input.timer.end:null,remaining:Number.isFinite(input.timer?.remaining)&&input.timer.remaining>=0?input.timer.remaining:null,taskId:typeof input.timer?.taskId==='string'?input.timer.taskId:null},notified:Array.isArray(input.notified)?input.notified.filter(x=>typeof x==='string').slice(-500):[]};
+  return {version:1,lists,tasks,settings:{theme:settings.theme==='dark'?'dark':'light',artwork:settings.artwork!==false,notifications:settings.notifications!==false,sort:['priority','date','created','manual','important','urgent','title','list','tags','completed'].includes(settings.sort)?settings.sort:defaults.sort,focusMinutes:validFocusMinutes(settings.focusMinutes)?settings.focusMinutes:25},timer:{end:Number.isFinite(input.timer?.end)?input.timer.end:null,remaining:Number.isFinite(input.timer?.remaining)&&input.timer.remaining>=0?input.timer.remaining:null,taskId:typeof input.timer?.taskId==='string'?input.timer.taskId:null},notified:Array.isArray(input.notified)?input.notified.filter(x=>typeof x==='string').slice(-500):[]};
 }
 export function demoState() {
   const s=initialState();const today=localDate();

@@ -9,6 +9,7 @@ module.exports=async({app,win,commit,getState,dataFile,model})=>{
   const until=async(code)=>{for(let i=0;i<100;i++){if(await js(code))return;await sleep(50);}throw new Error('UI condition timed out: '+code);};
   const click=selector=>js(`document.querySelector(${JSON.stringify(selector)}).click()`);
   const value=(selector,text)=>js(`document.querySelector(${JSON.stringify(selector)}).value=${JSON.stringify(text)}`);
+  const setFilter=async(key,val)=>{if(!await js('!!document.querySelector(".filter-popover")'))await click('[data-action="filters-toggle"]');await value(`[data-filter="${key}"]`,val);await js(`document.querySelector('[data-filter="${key}"]').dispatchEvent(new Event('change',{bubbles:true}))`);};
   const reload=async()=>{await js('window.__chiakiReady=false');win.webContents.reload();await sleep(200);await until('window.__chiakiReady === true');await until('[...document.images].every(i=>i.complete && i.naturalWidth>0)');};
   const saved=()=>until('document.querySelector("#save-status").textContent.includes("保存在此电脑")');
   const screenshot=async(name)=>{const key=await win.webContents.insertCSS('*{animation:none!important;transition:none!important}');await win.webContents.capturePage(undefined,{stayHidden:true});await sleep(150);const shot=await win.webContents.capturePage(undefined,{stayHidden:true});await fs.writeFile(path.join(root,name+'.png'),shot.toPNG());await win.webContents.removeInsertedCSS(key);};
@@ -16,7 +17,7 @@ module.exports=async({app,win,commit,getState,dataFile,model})=>{
   const stableCalendarSelection=async(label)=>{
     const dates=await js(`(()=>{const month=document.querySelector('.month-calendar').dataset.month.slice(0,7);const days=[...document.querySelectorAll('.calendar-day')].filter(d=>d.dataset.date.startsWith(month));return [days.find(d=>Number(d.querySelector('.day-count')?.textContent)>2),days.find(d=>d.querySelector('.day-count')?.textContent==='1'),days.find(d=>!d.querySelector('.day-count'))].map(d=>d.dataset.date);})()`);
     const geometry=()=>js(`(()=>{const c=document.querySelector('.calendar-content'),r=document.querySelector('.calendar-grid').getBoundingClientRect();return {top:r.top,left:r.left,width:r.width,scroll:c.scrollTop,height:c.scrollHeight};})()`);
-    await js('window.__calendarGrid=document.querySelector(".calendar-grid");window.__calendarArt=document.querySelector(".art-panel");');
+    await js('window.__calendarGrid=document.querySelector(".calendar-grid");window.__calendarArt=document.querySelector(".companion-panel");');
     for(const scroll of [0,60]){
       await js(`document.querySelector('.calendar-content').scrollTop=${scroll}`);
       for(const date of [...dates,...dates.toReversed()]){
@@ -26,7 +27,7 @@ module.exports=async({app,win,commit,getState,dataFile,model})=>{
         assert.equal(await js('document.querySelectorAll(".calendar-agenda [data-task]").length'),getState().tasks.filter(t=>!t.completed&&t.dueDate===date).length);
       }
     }
-    assert.ok(await js('window.__calendarGrid===document.querySelector(".calendar-grid") && window.__calendarArt===document.querySelector(".art-panel")'));
+    assert.ok(await js('window.__calendarGrid===document.querySelector(".calendar-grid") && window.__calendarArt===document.querySelector(".companion-panel")'));
     const before=await geometry();await js(`(()=>{const d=document.querySelector('.calendar-day[data-date="${dates[0]}"]');d.focus({preventScroll:true});d.dispatchEvent(new KeyboardEvent('keydown',{key:' ',bubbles:true}));})()`);await sleep(550);assert.deepEqual(await geometry(),before);
     assert.equal(await js(`document.querySelector('.calendar-day[data-date="${dates[0]}"]').getAttribute('aria-pressed')`),'true');
     await js('document.querySelector(".calendar-content").scrollTop=0');
@@ -47,13 +48,14 @@ module.exports=async({app,win,commit,getState,dataFile,model})=>{
     await commit(model.initialState());await reload();await screenshot('empty');
     await click('[data-action="new-task"]');
     await value('#task-title','<img src=x onerror=alert(1)> 本地测试待办');
-    await value('[name="notes"]','验证保存、子任务与重复');
+    await value('[name="notes"]','验证保存、子任务与重复');await value('[name="tags"]','学习，项目，学习');
     await value('[name="priority"]','high');
     await js('document.querySelector("[name=important]").checked=true;document.querySelector("[name=urgent]").checked=true;');
     await value('[name="repeat"]','daily');
     await value('#subtask-input','第一步');await click('[data-action="add-subtask"]');
     await js('document.querySelector("#task-form").requestSubmit()');await saved();
     check('create task and save on disk',()=>{assert.equal(getState().tasks.length,1);assert.equal(getState().tasks[0].priority,'high');assert.equal(getState().tasks[0].subtasks.length,1);});
+    check('task tags saved and deduplicated',()=>assert.deepEqual(getState().tasks[0].tags,['学习','项目']));
     check('escaped task title',()=>assert.equal(getState().tasks[0].title,'<img src=x onerror=alert(1)> 本地测试待办'));
     assert.equal(await js('document.querySelectorAll(".task-content img").length'),0);
     await reload();assert.equal(await js('document.querySelectorAll("[data-task]").length'),1);checks.push('restart reload persisted task');
@@ -64,30 +66,39 @@ module.exports=async({app,win,commit,getState,dataFile,model})=>{
     await click('[data-view="matrix"]');
     await js(`(()=>{const row=document.querySelector('[data-task]');const zone=document.querySelector('[data-drop-quadrant="plan"]');const data=new DataTransfer();row.dispatchEvent(new DragEvent('dragstart',{bubbles:true,dataTransfer:data}));zone.dispatchEvent(new DragEvent('dragover',{bubbles:true,dataTransfer:data}));zone.dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:data}));})()`);await saved();
     check('drag between quadrants updates properties',()=>{assert.equal(getState().tasks[0].important,true);assert.equal(getState().tasks[0].urgent,false);});
-    for(const target of ['list:work','list:personal','today','priority','all']){
-      await click(`[data-view="${target}"]`);
-      assert.equal(await js('document.querySelectorAll(".quadrant").length'),4);
-      assert.equal(await js('document.querySelectorAll("[data-task]").length'),model.filteredTasks(getState(),target).length);
-    }
-    checks.push('sidebar filters tasks without resetting quadrant layout');
-    await click('[data-view="list:personal"]');await click('[data-action="layout"][data-value="list"]');
-    assert.equal(await js('document.querySelectorAll(".quadrant").length'),0);
-    assert.equal(await js('document.querySelector(".page-header h1").textContent'),'个人');
-    await click('[data-action="layout"][data-value="matrix"]');
-    assert.equal(await js('document.querySelector(".page-header h1").textContent'),'个人');
-    await click('[data-view="scheduled"]');await click('[data-view="list:personal"]');
-    assert.equal(await js('document.querySelectorAll(".quadrant").length'),4);
-    checks.push('list and quadrant toggles preserve list scope across calendar navigation');
-    await click('[data-action="new-list"]');await value('#list-name','自定义清单');await js('document.querySelector("#list-form").requestSubmit()');await saved();
-    check('create custom list',()=>assert.ok(getState().lists.some(l=>l.name==='自定义清单')));
+    assert.equal(await js('document.querySelectorAll(".sidebar [data-view]").length'),4);
+    for(let i=0;i<3;i++){await click('[data-view="matrix"]');assert.equal(await js('document.querySelectorAll(".quadrant").length'),4);await click('[data-view="all"]');assert.equal(await js('document.querySelectorAll(".quadrant").length'),0);assert.equal(await js('document.querySelector(".page-header h1").textContent'),'全部待办');}
+    checks.push('all tasks sidebar reliably returns from quadrants to list');
+    await setFilter('important','yes');await click('[data-filter-array="listIds"][value="work"]');
+    assert.equal(await js('document.querySelectorAll("[data-task]").length'),0);
+    await click('[data-action="filter-remove"][data-value="work"]');assert.equal(await js('document.querySelectorAll("[data-task]").length'),1);
+    await click('[data-filter-array="listIds"][value="personal"]');
+    await click('[data-action="layout"][data-value="matrix"]');assert.equal(await js('document.querySelectorAll(".quadrant").length'),4);assert.equal(await js('document.querySelectorAll("[data-task]").length'),1);
+    await click('[data-view="scheduled"]');await click('[data-view="all"]');assert.equal(await js('document.querySelectorAll(".quadrant").length'),0);assert.equal(await js('document.querySelectorAll("[data-task]").length'),1);assert.ok(await js(`!!document.querySelector('[data-action="filter-remove"][data-value="personal"]')`));
+    checks.push('list and quadrant switching preserves combined filters and sidebar list returns');
+    await click('[data-action="filters-reset"]');await click('[data-action="filters-toggle"]');await click('[data-action="manage-lists"]');await click('[data-action="new-list"]');await value('#list-name','自定义清单');await js('document.querySelector("#list-form").requestSubmit()');await saved();
+    check('manage and create lists inside filtering controls',()=>assert.ok(getState().lists.some(l=>l.name==='自定义清单')));
     await click('[data-action="settings"]');await click('[data-setting="theme"]');await saved();
     check('dark mode persists',()=>assert.equal(getState().settings.theme,'dark'));
     assert.equal(await js('getComputedStyle(document.body).backgroundColor'),'rgb(37, 37, 41)');checks.push('dark mode renders correct colors');
     await click('[data-action="close-modal"]');
-    await click('[data-action="timer"]');await saved();assert.ok(getState().timer.end>Date.now());
+    await value('#focus-duration','37');await js('document.querySelector("#focus-duration").dispatchEvent(new Event("change",{bubbles:true}))');await saved();assert.equal(getState().settings.focusMinutes,37);assert.equal(await js('document.querySelector("#focus-time").textContent'),'37:00');
+    await value('#focus-duration','0');await js('document.querySelector("#focus-duration").dispatchEvent(new Event("change",{bubbles:true}))');assert.equal(getState().settings.focusMinutes,37);assert.equal(await js('document.querySelector("#focus-duration").value'),'37');
+    await reload();assert.equal(await js('document.querySelector("#focus-duration").value'),'37');
+    await click('[data-action="timer"]');await saved();assert.ok(getState().timer.end-Date.now()>36*60000);assert.ok(await js('document.querySelector("#focus-duration").disabled'));
+    checks.push('custom focus minutes persist, reject invalid values and start correct duration');
     await click('[data-action="timer"]');await saved();
     check('paused focus timer is persisted',()=>{assert.equal(getState().timer.end,null);assert.ok(getState().timer.remaining>0);});
     await reload();assert.ok((await js('document.querySelector(".focus-start").textContent')).includes('继续'));checks.push('paused timer survives restart');
+    const fixture=model.demoState();fixture.tasks[0].tags=['项目'];fixture.tasks[1].tags=['学习'];fixture.tasks[4].tags=['学习'];await commit(fixture);await reload();
+    await click('[data-view="all"]');await setFilter('important','yes');await click('[data-filter-array="listIds"][value="work"]');await setFilter('priority','medium');assert.equal(await js('document.querySelectorAll("[data-task]").length'),1);
+    await click('[data-filter-array="listIds"][value="personal"]');await click('[data-filter-array="tags"][value="学习"]');await setFilter('urgent','no');await setFilter('date','week');await setFilter('repeat','no');await setFilter('subtasks','no');assert.equal(await js('document.querySelectorAll("[data-task]").length'),2);await screenshot('filters');
+    await click('[data-action="filters-toggle"]');await value('#sort-select','title');await js('document.querySelector("#sort-select").dispatchEvent(new Event("change",{bubbles:true}))');await saved();
+    const rows=await js('[...document.querySelectorAll("[data-task]")].map(t=>t.dataset.task)');const expected=fixture.tasks.filter(t=>['读一会儿喜欢的书','整理这个月的学习笔记'].includes(t.title)).sort((a,b)=>a.title.localeCompare(b.title,'zh-CN',{numeric:true})).map(t=>t.id);assert.deepEqual(rows,expected);
+    checks.push('multiple list, tag, feature and date filters combine with title sorting');
+    await click('[data-action="filters-reset"]');await click('[data-action="filter-tag"][data-tag="项目"]');assert.equal(await js('document.querySelectorAll("[data-task]").length'),1);assert.equal(await js('document.querySelectorAll("#overlay-root .dialog").length'),0);await click('[data-action="filters-reset"]');
+    await setFilter('status','completed');assert.equal(await js('document.querySelectorAll("[data-task]").length'),1);const done=fixture.tasks.find(t=>t.completed);await click(`[data-action="complete"][data-id="${done.id}"]`);await saved();assert.equal(await js('document.querySelectorAll("[data-task]").length'),0);assert.equal(getState().tasks.find(t=>t.id===done.id).completed,false);
+    checks.push('completed tasks are filtered and can be restored in the same list');
     await commit(model.demoState());await reload();await screenshot('today');
     await click('[data-view="scheduled"]');
     const today=model.localDate(),date=model.addDays(today,2);
@@ -134,13 +145,13 @@ module.exports=async({app,win,commit,getState,dataFile,model})=>{
     await click('[data-action="edit-task"]');await screenshot('task-editor');await click('[data-action="close-modal"]');
     await click('[data-action="settings"]');await click('[data-setting="theme"]');await saved();await click('[data-action="close-modal"]');await screenshot('dark');
     await click('[data-action="settings"]');await click('[data-setting="theme"]');await saved();await click('[data-action="close-modal"]');
-    win.setSize(1060,700);await sleep(300);await screenshot('compact');
+    win.setSize(1060,700);await sleep(300);await click('[data-view="all"]');await setFilter('status','all');await screenshot('filters-compact');assert.ok(await js('(()=>{const r=document.querySelector(".filter-popover").getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.bottom<=innerHeight;})()'));await click('[data-action="filters-reset"]');await click('[data-action="filters-toggle"]');await screenshot('compact');
     const overflows=await js(`(()=>{const el=document.querySelector('.workspace');return {width:el.scrollWidth,client:el.clientWidth,body:document.body.scrollWidth,viewport:window.innerWidth};})()`);
     check('minimum window does not overflow horizontally',()=>assert.ok(overflows.body<=overflows.viewport&&overflows.width<=overflows.client));
     win.setSize(1440,930);await sleep(200);await click('[data-view="all"]');
     await click('[data-action="search"]');await value('#search-form input','第一版');await js('document.querySelector("#search-form").requestSubmit()');
     assert.equal(await js('document.querySelectorAll("[data-task]").length'),1);checks.push('global search filters results');
-    await click('[data-action="clear-search"]');await click('[data-view="completed"]');assert.equal(await js('document.querySelectorAll("[data-task]").length'),1);checks.push('completed archive');
+    await click('[data-action="clear-search"]');await setFilter('status','completed');assert.equal(await js('document.querySelectorAll("[data-task]").length'),1);checks.push('completed filter in task list');
     const stored=JSON.parse(await fs.readFile(dataFile,'utf8'));assert.equal(stored.tasks.length,8);assert.ok((await fs.stat(path.join(path.dirname(dataFile),'tasks.backup.json'))).size>0);checks.push('atomic file save and recovery snapshot');
     assert.deepEqual(errors,[]);checks.push('no renderer errors');
     await fs.writeFile(path.join(root,'test-results.json'),JSON.stringify({passed:checks.length,checks,errors},null,2),'utf8');
