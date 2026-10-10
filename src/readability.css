@@ -1,0 +1,54 @@
+.brand{gap:10px;margin-left:5px;margin-right:5px}
+.brand span{line-height:1.5;letter-spacing:0}
+.nav-item{height:49px}.nav-count{min-width:24px}
+.search-trigger{height:43px;gap:7px}.search-trigger kbd{font-size:12px;padding:0}
+.titlebar-name{font-size:13px}.titlebar-center{font-size:12px}
+.primary-button,.secondary-button{height:44px;padding-left:16px;padding-right:16px}
+.toolbar{height:auto;min-height:52px;flex-shrink:0;flex-wrap:wrap;padding-bottom:14px;margin-bottom:22px;row-gap:12px}
+.view-switch button{height:35px;padding:0 10px}
+.toolbar-right{flex:1;justify-content:flex-end;flex-wrap:wrap;gap:8px}
+.sort-select select{width:118px;padding:5px 1px;font-size:14px}
+.search-inline{height:34px;max-width:165px}.search-inline input{font-size:14px}
+.filter-trigger{height:35px;font-size:14px}.filter-trigger b{font-size:13px}
+.filter-popover{top:43px;width:380px;max-height:min(520px,calc(100vh - 250px))}
+.filter-field select{height:38px}.filter-field>span{margin-bottom:7px}
+.filter-choice{padding:8px 10px}.filter-choice input{width:15px;height:15px}
+.filter-chips{max-height:94px}.filter-chips>button{font-size:13px}.filter-chips .icon{width:13px;height:13px}
+.task-row{min-height:96px}.task-title{line-height:1.65;font-weight:500}.task-meta{gap:10px;line-height:1.6}
+.task-meta .icon{height:14px;width:14px}.task-meta .task-tag{font-size:13px;padding:2px 6px}
+.compact{min-height:78px}.compact .task-title{font-size:16px;font-weight:450}.compact .task-meta{font-size:13px;line-height:1.5}
+.quadrant .quick-add input{font-size:14px}.quadrant-heading p{font-size:13px}
+.quick-add{min-height:52px}.quick-add input{font-size:15px}.task-group h3{font-size:14px}
+.card-heading{flex-wrap:wrap;font-size:14px}
+.focus-duration-field{font-size:13px;flex-shrink:0}.focus-duration-field input{width:63px;height:32px;font-size:15px}
+.focus-start{font-size:14px;min-width:140px}.focus-card{padding:18px}
+.progress-card p{font-size:13px;line-height:1.6}.progress-card .card-heading{font-size:14px}
+.form-grid select,.form-grid input,.repeat-row select{height:41px}.task-tags-field input{height:38px}
+.settings-note{font-size:13px}.settings-row{height:52px}.backup-actions{flex-wrap:wrap}
+.backup-actions .secondary-button{font-size:14px;height:40px}.settings-bottom{gap:14px;flex-wrap:wrap}
+.calendar-controls .icon-button{width:30px;height:32px}.calendar-month-label input{width:174px;font-size:18px}
+.calendar-today{font-size:14px;padding:6px 10px}.calendar-weekdays{font-size:14px}
+.day-number{font-size:16px;width:27px;height:27px}.day-count{font-size:12px}
+.calendar-task{height:25px;font-size:14px;padding:2px 4px}.calendar-more{font-size:12px;line-height:18px}
+.calendar-agenda h2{font-size:16px}.calendar-agenda h2 span{font-size:13px}.calendar-agenda{height:300px}
+.calendar-agenda .task-row{min-height:90px}
+@media(max-width:1250px){
+  .brand strong{font-size:20px}.brand{gap:8px}.brand-mark{width:38px;height:38px;flex-shrink:0}
+  .brand span{font-size:12px}.search-trigger{padding:0 8px}.search-trigger kbd{display:none}
+  .nav-item{font-size:16px;padding:0 11px}.main-panel{padding-left:22px;padding-right:22px}
+  .sort-select select{width:112px;font-size:14px}.toolbar-right{gap:6px}.view-switch button{padding:0 8px;gap:5px;font-size:14px}
+  .filter-popover{width:340px}.filter-trigger{font-size:14px;padding:0 8px}
+  .page-header>.primary-button{height:42px}.focus-card,.progress-card{padding:15px}
+  .focus-duration-field input{width:61px}.focus-start{min-width:132px;padding:9px 10px}
+  .quadrant h2{font-size:15px;letter-spacing:0}.quadrant h2>span{font-size:13px}
+  .quadrant-heading{gap:6px}.quadrant-symbol{width:25px;height:25px}.quadrant-heading p{font-size:12px;letter-spacing:0}
+  .calendar-month-label input{width:163px;font-size:17px}.calendar-controls{gap:2px}
+}
+@media(max-height:800px){
+  .nav-item{height:46px}.page-header{margin-bottom:23px}.calendar-panel .page-header{margin-bottom:16px}
+  .calendar-toolbar{margin-bottom:14px;padding-bottom:10px;min-height:44px}
+  .calendar-day{min-height:58px;padding:4px 4px 3px}.calendar-day-heading{margin-bottom:2px}
+  .day-number{width:25px;height:25px;font-size:15px}.calendar-task{height:23px;font-size:13px}
+  .calendar-more{font-size:12px;line-height:17px}.calendar-weekdays{padding-bottom:8px}
+  .dialog-header{font-size:16px}.task-title-input{font-size:23px}
+}

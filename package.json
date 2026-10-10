@@ -1,7 +1,7 @@
 {
   "name": "qianqiu-wandai",
   "productName": "千秋万待",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "千秋万待：Windows 11 本地待办、四象限、月历与专注计时",
   "main": "desktop/main.cjs",
   "private": true,
