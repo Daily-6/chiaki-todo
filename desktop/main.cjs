@@ -76,7 +76,8 @@ async function checkReminders() {
 }
 function buildWindow() {
   const iconPath=path.join(__dirname,'../src/assets/app-icon.png');
-  win=new BrowserWindow({width:1440,height:930,minWidth:1060,minHeight:700,frame:false,show:false,backgroundColor:'#faf8f5',title:'千秋万待',icon:nativeImage.createFromPath(iconPath),autoHideMenuBar:true,webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:false}});
+  // Keep hidden QA windows painting so wheel hit-testing follows resized viewports.
+  win=new BrowserWindow({width:1440,height:930,minWidth:1060,minHeight:700,frame:false,show:false,backgroundColor:'#faf8f5',title:'千秋万待',icon:nativeImage.createFromPath(iconPath),autoHideMenuBar:true,webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:false,...(isTest?{offscreen:true}:{})}});
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',event=>event.preventDefault());
   win.on('maximize',()=>win.webContents.send('window:maximized',true));

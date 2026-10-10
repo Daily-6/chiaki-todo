@@ -14,6 +14,24 @@ module.exports=async({app,win,commit,getState,dataFile,model})=>{
   const saved=()=>until('document.querySelector("#save-status").textContent.includes("保存在此电脑")');
   const screenshot=async(name)=>{const key=await win.webContents.insertCSS('*{animation:none!important;transition:none!important}');await win.webContents.capturePage(undefined,{stayHidden:true});await sleep(150);const shot=await win.webContents.capturePage(undefined,{stayHidden:true});await fs.writeFile(path.join(root,name+'.png'),shot.toPNG());await win.webContents.removeInsertedCSS(key);};
   const checks=[];const check=(name,fn)=>{fn();checks.push(name);console.log('PASS '+name);};
+  const calendarWheelChaining=async(label)=>{
+    win.webContents.debugger.attach('1.3');
+    try{
+      const geometry=()=>js(`(()=>{const c=document.querySelector('.calendar-content'),a=document.querySelector('.calendar-agenda'),r=a.getBoundingClientRect(),v=c.getBoundingClientRect();return {outer:c.scrollTop,inner:a.scrollTop,innerMax:a.scrollHeight-a.clientHeight,x:Math.round(r.left+r.width/2),y:Math.round(Math.min(r.top+70,v.bottom-20))};})()`);
+      const wheel=async(deltaY)=>{await win.webContents.capturePage(undefined,{stayHidden:true});await sleep(150);const p=await geometry();await win.webContents.debugger.sendCommand('Input.dispatchMouseEvent',{type:'mouseMoved',x:p.x,y:p.y});await win.webContents.debugger.sendCommand('Input.dispatchMouseEvent',{type:'mouseWheel',x:p.x,y:p.y,deltaX:0,deltaY});await sleep(400);await win.webContents.capturePage(undefined,{stayHidden:true});};
+      const bottom=()=>js(`(()=>{const c=document.querySelector('.calendar-content'),a=document.querySelector('.calendar-agenda');c.scrollTop=c.scrollHeight;a.scrollTop=0;})()`);
+      await click(`.calendar-day[data-date="${model.localDate()}"]`);await bottom();await sleep(100);
+      const before=await geometry();assert.ok(before.outer>0&&before.innerMax>0,'Fixture must have scrollable calendar and busy agenda');
+      await wheel(-120);assert.ok((await geometry()).outer<before.outer,label+' upward wheel at agenda top returns to calendar: '+JSON.stringify({before,after:await geometry()}));
+      await bottom();await sleep(100);await wheel(100);assert.ok((await geometry()).inner>0,label+' wheel still scrolls long agenda');
+      await js(`(()=>{const c=document.querySelector('.calendar-content'),a=document.querySelector('.calendar-agenda');c.scrollTop=Math.max(0,c.scrollHeight-c.clientHeight-100);a.scrollTop=a.scrollHeight;})()`);await sleep(100);
+      const down=await geometry();await wheel(120);assert.ok((await geometry()).outer>down.outer,label+' downward wheel at agenda bottom continues outer scrolling');
+      const empty=await js(`[...document.querySelectorAll('.calendar-day')].find(d=>!d.classList.contains('outside-month')&&!d.querySelector('.day-count')).dataset.date`);
+      await click(`.calendar-day[data-date="${empty}"]`);await bottom();await sleep(100);const blank=await geometry();assert.equal(blank.innerMax,0);await wheel(-120);assert.ok((await geometry()).outer<blank.outer,label+' empty agenda also permits upward calendar scrolling');
+      await click(`.calendar-day[data-date="${model.localDate()}"]`);await js('document.querySelector(".calendar-content").scrollTop=0;document.querySelector(".calendar-agenda").scrollTop=0');
+      checks.push(label+' real wheel input chains between daily agenda and calendar at both boundaries');
+    }finally{win.webContents.debugger.detach();}
+  };
   const stableCalendarSelection=async(label)=>{
     const dates=await js(`(()=>{const month=document.querySelector('.month-calendar').dataset.month.slice(0,7);const days=[...document.querySelectorAll('.calendar-day')].filter(d=>d.dataset.date.startsWith(month));return [days.find(d=>Number(d.querySelector('.day-count')?.textContent)>2),days.find(d=>d.querySelector('.day-count')?.textContent==='1'),days.find(d=>!d.querySelector('.day-count'))].map(d=>d.dataset.date);})()`);
     const geometry=()=>js(`(()=>{const c=document.querySelector('.calendar-content'),r=document.querySelector('.calendar-grid').getBoundingClientRect();return {top:r.top,left:r.left,width:r.width,scroll:c.scrollTop,height:c.scrollHeight};})()`);
@@ -133,8 +151,8 @@ module.exports=async({app,win,commit,getState,dataFile,model})=>{
     await click('[data-action="calendar-today"]');
     assert.equal(await js('document.querySelector(".selected-day").dataset.date'),today);
     checks.push('calendar handles year change, leap day, adjacent month and return to today');
-    await commit(model.demoState());await reload();await click('[data-view="scheduled"]');await screenshot('calendar');
-    win.setSize(1060,700);await sleep(200);await stableCalendarSelection('compact window');await screenshot('calendar-compact');
+    await commit(model.demoState());await reload();await click('[data-view="scheduled"]');await calendarWheelChaining('full window');await screenshot('calendar');
+    win.setSize(1060,700);await sleep(200);await calendarWheelChaining('compact window');await stableCalendarSelection('compact window');await screenshot('calendar-compact');
     await value('#calendar-month','2026-08');await js('document.querySelector("#calendar-month").dispatchEvent(new Event("change",{bubbles:true}))');await screenshot('calendar-six-weeks');
     assert.equal(await js('document.querySelectorAll(".calendar-day").length'),42);
     assert.ok(await js('document.body.scrollWidth<=innerWidth && document.querySelector(".calendar-grid").scrollWidth<=document.querySelector(".calendar-grid").clientWidth'));
